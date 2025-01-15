@@ -1,6 +1,6 @@
 targetScope = 'subscription'
 
-param updatedBy string 
+param updatedBy string
 
 @allowed([
   'test'
@@ -8,9 +8,9 @@ param updatedBy string
   'prod'
   'acc'
 ])
-param environmentType string 
+param environmentType string
 
-param subscriptionId string 
+param subscriptionId string
 
 @description('Unique identifier for the deployment')
 param deploymentGuid string = newGuid()
@@ -23,13 +23,16 @@ param productType string
 
 @description('Azure Region to deploy the resources in.')
 @allowed([
-  'westeurope'
+  'australiaeast'
+  'australiacentral'
+  'eastus'
+  'eastus2'
   'northeurope'
-  
+
 ])
-param location string = 'westeurope'
+param location string = 'australiaeast'
 @description('Location shortcode. Used for end of resource names.')
-param locationShortCode string 
+param locationShortCode string
 
 @description('Add tags as required as Name:Value')
 param tags object = {
@@ -45,7 +48,7 @@ param publisherName string
 param offerName string
 
 param sigImageVersion string = utcNow('yyyy.MM.dd')
-param azureSharedImageGalleryName string 
+param azureSharedImageGalleryName string
 param imageTemplateName string
 param imagesSharedGalleryName string
 param avdHostpoolName string
@@ -54,7 +57,7 @@ param workspaceName string
 param availabilitySetName string
 
 param userAssignedManagedIdentityName string
-param vnetName string 
+param vnetName string
 param subnetName string
 
 param storageAccountName string
@@ -70,25 +73,25 @@ var VNetConfiguration = {
       addressPrefix: avdSubnetPrefix
       privateLinkServiceNetworkPolicies: 'Disabled'
       networkSecurityGroupResourceId: createNetworkSecurityGroup.outputs.resourceId
-      
-      
+
+
     }
       ]
-  
+
 }
 
 // Deploy required Resource Groups - New Resources
-module createResourceGroup 'br/public:avm/res/resources/resource-group:0.4.0' = { 
+module createResourceGroup 'br/public:avm/res/resources/resource-group:0.4.0' = {
     scope: subscription(subscriptionId)
     name: 'rg-${deploymentGuid}'
     params: {
       name: resourceGroupName
       location: location
       tags: tags
-      
-               
+
+
     }
-    
+
   }
 
   module createNetworkSecurityGroup 'br/public:avm/res/network/network-security-group:0.4.0' = {
@@ -111,15 +114,15 @@ name: 'vnet-${deploymentGuid}'
 params: {
   name: vnetName
   location: location
-  addressPrefixes: [vnetAddressPrefix] 
+  addressPrefixes: [vnetAddressPrefix]
   subnets: VNetConfiguration.Subnets
-  tags:tags 
+  tags:tags
   roleAssignments: [
     {
       roleDefinitionIdOrName: 'contributor'
       principalId: userAssignedManagedIdentity.outputs.principalId
       principalType: 'ServicePrincipal'
-    }] 
+    }]
 }
 dependsOn: [createResourceGroup]
 
@@ -131,7 +134,7 @@ module userAssignedManagedIdentity 'br/public:avm/res/managed-identity/user-assi
       name: userAssignedManagedIdentityName
       location: location
       tags: tags
-      
+
     }
     dependsOn: [createResourceGroup]
   }
@@ -155,7 +158,7 @@ module createSharedImageGallery 'br/public:avm/res/compute/gallery:0.7.0' = {
         osState: 'Generalized'
         hyperVGeneration: 'V2'
         securityType: 'TrustedLaunch'
-        
+
       }
     ]
 
@@ -215,19 +218,19 @@ module createImageTemplate 'br/public:avm/res/virtual-machine-images/image-templ
       version: 'latest'
     }
     tags: tags
-   
-    
+
+
     distributions: [
       {
         type: 'SharedImage'
         sharedImageGalleryImageDefinitionResourceId: createSharedImageGallery.outputs.imageResourceIds[0]
         sharedImageGalleryImageDefinitionTargetVersion: sigImageVersion
-      
+
       }
     ]
-  
-    
-    
+
+
+
     managedIdentities: {
       userAssignedResourceIds: [
         userAssignedManagedIdentity.outputs.resourceId
@@ -289,7 +292,7 @@ module createWorkspace 'br/public:avm/res/desktop-virtualization/workspace:0.7.0
     location: location
     applicationGroupReferences: [ createApplicationGroup.outputs.resourceId ]
     tags: tags
-    
+
 
 
   }
